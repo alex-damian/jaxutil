@@ -25,6 +25,7 @@ def ResNet18(activation=jax.nn.relu, small_image=True, normalization="GN", **kwa
         }
     if normalization == "BN": config['norm_cls'] = partial(nn.BatchNorm, momentum=0.9)
     elif normalization == "GN": config['norm_cls'] = lambda *args, **kwargs: nn.GroupNorm(num_groups=32)
+    elif normalization == None: config['norm_cls'] = lambda *args, **kwargs: lambda x: x
     else: raise Exception(f"Unknown normalization: {normalization}")
     if small_image: config['pool_fn'] = lambda x: x
     return ResNet(**config,**kwargs)
