@@ -22,8 +22,9 @@ def batch_split(x, devices):
 
 
 def laxmean(f, x, out_shape):
+    n = len(jax.tree_leaves(x)[0])
     def _step(s, xi):
-        s += f(xi) / len(x)
+        s += f(xi)/n
         return s, None
 
     return lax.scan(_step, jnp.zeros(out_shape), x)[0]
