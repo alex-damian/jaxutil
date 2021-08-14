@@ -21,7 +21,7 @@ def numpy(data_dir, download=False, normalize=True, one_hot=True):
 		train_x, test_x = CIFAR10_Normalize(train_x), CIFAR10_Normalize(test_x)
 	if one_hot:
 		train_y, test_y = OneHot(train_y), OneHot(test_y)
-		return train_x,train_y,test_x,test_y
+	return train_x,train_y,test_x,test_y
 
 def torch(data_dir, download=False, normalize=True, one_hot=True, data_aug=False):
 	normalizations = [CIFAR10_Normalize] if normalize else []
