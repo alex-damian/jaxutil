@@ -40,3 +40,15 @@ def torch(data_dir, download=False, normalize=True, one_hot=True, data_aug=False
 						train=False,
 						download=download)
 	return traindata, testdata
+
+def CIFAR10_data_aug(batch,rng):
+    x,y = batch
+    def _augment(x,flip,crops):
+        x = lax.cond(flip,lambda _: x,lambda _: jnp.fliplr(x),None)
+        x = jnp.pad(x, pad_width=[(4,4),(4,4),(0,0)])          #pad for shifting
+        x = lax.dynamic_slice(x,(*crops,0),(32,32,3))
+        return x
+    flip_rng,crop_rng = random.split(rng)
+    flips = random.uniform(rng,(len(x),)) > 0.5
+    crops = random.randint(rng,(len(x),2),0,9)
+    return vmap(_augment)(x,flips,crops),y
