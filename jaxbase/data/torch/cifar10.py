@@ -1,6 +1,8 @@
 import torchvision
 import torchvision.transforms as T
 import numpy as np
+from jax import numpy as jnp
+from jax import random, lax, vmap
 
 CIFAR10_MEAN = np.array([125.30691805, 122.95039414, 113.86538318])
 CIFAR10_STD = np.array([62.99321928, 62.08870764, 66.70489964])
