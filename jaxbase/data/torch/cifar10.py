@@ -41,7 +41,7 @@ def torch(data_dir, download=False, normalize=True, one_hot=True, data_aug=False
 						download=download)
 	return traindata, testdata
 
-def CIFAR10_data_aug(batch,rng):
+def data_aug(batch,rng):
     x,y = batch
     def _augment(x,flip,crops):
         x = lax.cond(flip,lambda _: x,lambda _: jnp.fliplr(x),None)
