@@ -3,7 +3,7 @@ from setuptools import setup, find_packages
 setup(
     name="jaxbase",
     packages=find_packages(),
-    version="0.2.8",
+    version="0.2.9",
     author="Alex Damian",
     author_email="ad27@princeton.edu",
     description="Jax utility package for common models and datasets",
