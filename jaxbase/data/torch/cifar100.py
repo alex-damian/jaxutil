@@ -4,8 +4,8 @@ import numpy as np
 from jax import numpy as jnp
 from jax import random, lax, vmap
 
-CIFAR1000_MEAN = np.array([129.30416561, 124.0699627 , 112.43405006])
-CIFAR10_STD = np.array([68.1702429 , 65.39180804, 70.41837019])
+CIFAR100_MEAN = np.array([129.30416561, 124.0699627 , 112.43405006])
+CIFAR100_STD = np.array([68.1702429 , 65.39180804, 70.41837019])
 
 def OneHot(x):
 	return np.eye(100)[x]
