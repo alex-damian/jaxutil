@@ -1,10 +1,11 @@
 import jax
 from jax import numpy as jnp
+import numpy as np
 from jax import lax
 
 
 def clean_dict(d):
-    return {key: val.item() for key, val in d.items()}
+    return {key: val.item() if isinstance(val,(np.ndarray,jnp.ndarray)) else val for key, val in d.items()}
 
 
 def Identity(*args, **kwargs):
