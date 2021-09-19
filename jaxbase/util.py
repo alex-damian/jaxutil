@@ -25,7 +25,7 @@ def batch_split(batch, n_batch=None, batch_size=None, strict=True):
         raise Exception("Need to specify either n_batch or batch_size")
 
     if strict:
-        assert n_devices*batch_size = n
+        assert n_devices*batch_size == n
     else:
         batch = jax.tree_map(lambda x: x[:n_devices*batch_size], batch)
     batches = jax.tree_map(lambda x: x.reshape((n_devices, batch_size, *x.shape[1:])), batch)
