@@ -19,7 +19,7 @@ def batch_split(batch, n_batch=None, batch_size=None, strict=True):
         batch_size = n//n_batch
     elif isinstance(n_batch, int):
         batch_size = n//n_batch
-    elif: isinstance(batch_size, int):
+    elif isinstance(batch_size, int):
         n_batch = n//batch_size
     else:
         raise Exception("Need to specify either n_batch or batch_size")
