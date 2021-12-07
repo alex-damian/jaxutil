@@ -3,23 +3,32 @@ from jax import numpy as jnp
 import numpy as np
 from jax import lax
 from functools import reduce
+from jax.experimental.host_callback import id_tap
+from tqdm.auto import tqdm, trange
 
 def clean_dict(d):
     return {key: val.item() if isinstance(val,(np.ndarray,jnp.ndarray)) else val for key, val in d.items()}
 
+def tree_stack(trees):
+    _, treedef = jax.tree_flatten(trees[0])
+    leaf_list = [jax.tree_flatten(tree)[0] for tree in trees]
+    leaf_stacked = [jnp.stack(leaves) for leaves in zip(*leaf_list)]
+    return jax.tree_unflatten(treedef,leaf_stacked)
 
-def Identity(*args, **kwargs):
-    return lambda x: x
+def zeros_like_output(f,x):
+    pytree = jax.eval_shape(f, x)
+    return jax.tree_map(
+        lambda leaf: jnp.zeros(shape=leaf.shape, dtype=leaf.dtype), pytree
+    )
 
-
-def batch_split(batch, n_batch=None, batch_size=None, strict=True):
+def batch_split(batch, n_batch: int = None, batch_size: int = None, strict=True):
     n = len(jax.tree_leaves(batch)[0])
-    if isinstance(n_batch, list):
-        n_batch = len(devices)
+
+    if n_batch is not None and batch_size is not None:
+        raise Exception("Cannot specify both n_batch and batch_size")
+    elif n_batch is not None:
         batch_size = n//n_batch
-    elif isinstance(n_batch, int):
-        batch_size = n//n_batch
-    elif isinstance(batch_size, int):
+    elif batch_size is not None:
         n_batch = n//batch_size
     else:
         raise Exception("Need to specify either n_batch or batch_size")
@@ -31,51 +40,56 @@ def batch_split(batch, n_batch=None, batch_size=None, strict=True):
     batches = jax.tree_map(lambda x: x.reshape((n_batch, batch_size, *x.shape[1:])), batch)
     return batches
 
-
-def laxmean(f, x, init):
-    n = len(jax.tree_leaves(x)[0])
+def laxmean(f, data):
+    n = len(jax.tree_leaves(data)[0])
+    first_batch = jax.tree_map(lambda x: x[0], data)
+    avg_init = zeros_like_output(lambda x: f(x)[1], first_batch)
 
     def _step(s, xi):
         s = jax.tree_multimap(lambda si, fi: si + fi / n, s, f(xi))
         return s, None
 
-    return lax.scan(_step, init, x)[0]
+    return lax.scan(_step, avg_init, data)[0]
 
-def auto_batch(f,max_batch_size,strict=False,reduce_mean=False,output_size=None):
-    # copied from https://stackoverflow.com/questions/6800193/what-is-the-most-efficient-way-of-finding-all-the-factors-of-a-number-in-python
-    def factors(n): return set(reduce(list.__add__, ([i, n//i] for i in range(1, int(n**0.5) + 1) if n % i == 0)))
+def _fold_lax(f,state,data,show_progress=False):
+    n = len(jax.tree_leaves(data)[0])
+    first_batch = jax.tree_map(lambda x: x[0], data)
+    output_tree = jax.eval_shape(lambda args: f(*args), (state,first_batch))
+    assert len(output_tree)==3
+    avg_init = jax.tree_map(lambda leaf: jnp.zeros(shape=leaf.shape, dtype=leaf.dtype), output_tree[2])
 
-    def batched_f(*args,rng=None):
-        batch_size = len(jax.tree_flatten(args)[0][0])
-        if batch_size <= max_batch_size:
-            if rng is not None: return f(*args,rng=rng)
-            else: return f(*args)
-        else:
-            if strict:
-                minibatch_size = max(factor for factor in factors(batch_size) if factor <= max_batch_size)
-                n_batch = batch_size//minibatch_size
-            else:
-                n_batch = batch_size//max_batch_size
-                minibatch_size = batch_size//n_batch
-            
-            mapped_args = batch_split(args,batch_size=minibatch_size,strict=strict)
+    if show_progress: pbar = tqdm(total=n)
+    def step(carry,batch):
+        state,avg = carry
+        batch_state,batch_out,batch_avg = f(state,batch)
+        avg = jax.tree_multimap(lambda si, fi: si + fi / n, avg, batch_avg)
+        if show_progress: id_tap(lambda *_: pbar.update(),None)
+        return (batch_state,avg),batch_out
+    (state,average),outputs = lax.scan(step,(state,avg_init),data)
+    if show_progress: pbar.close()
+    return state,outputs,average
 
-            def _split(x):
-                x = x[:n_batch*minibatch_size]
-                x = x.reshape((n_batch,minibatch_size,*x.shape[1:]))
-                return x
-            
-            if rng is None: _f = lambda args: f(*args)
-            else:
-                rngs = random.split(rng,n_batch)
-                mapped_args = (mapped_args,rngs)
-                def _f(carry):
-                    *args,rng = carry
-                    return f(*args,rng=rng)
-            if reduce_mean:
-                return laxmean(_f,mapped_args,jnp.zeros(output_size))
-            else:
-                out = lax.map(_f,mapped_args)
-                out = jax.tree_map(lambda x: x.reshape((n_batch*minibatch_size,*x.shape[2:])),out)
-                return out
-    return batched_f
+def _fold_python(f,state,data,show_progress=False):
+    n = len(jax.tree_leaves(data)[0])
+    first_batch = jax.tree_map(lambda x: x[0], data)
+    output_tree = jax.eval_shape(lambda args: f(*args), (state,first_batch))
+    assert len(output_tree)==3
+    average = jax.tree_map(lambda leaf: jnp.zeros(shape=leaf.shape, dtype=leaf.dtype), output_tree[2])
+    outputs = []
+
+    if show_progress: iterator = trange(n)
+    else: iterator = range(n)
+
+    for i in iterator:
+        batch = jax.tree_map(lambda x: x[i], data)
+        state,batch_out,batch_avg = f(state,batch)
+        outputs.append(batch_out)
+        average = jax.tree_multimap(lambda si, fi: si + fi / n, average, batch_avg)
+    outputs = tree_stack(outputs)
+    return state,outputs,average
+
+def fold(f,state,data,show_progress=False,backend='lax'):
+    if backend=='lax':
+        return _fold_lax(f,state,data,show_progress)
+    else:
+        return _fold_python(f,state,data,show_progress)
