@@ -109,4 +109,4 @@ def fold(f, state, data, show_progress=False, backend="lax"):
 
 def laxmean(f, data, show_progress=False, backend="lax"):
     _f = lambda _, batch: (None, None, f(batch))
-    fold(f, None, data, show_progress=show_progress, backend=backend)
+    fold(_f, None, data, show_progress=show_progress, backend=backend)
