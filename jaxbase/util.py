@@ -107,6 +107,10 @@ def fold(f, state, data, show_progress=False, backend="lax"):
         return _fold_python(f, state, data, show_progress)
 
 
-def laxmean(f, data, show_progress=False, backend="lax"):
-    _f = lambda _, batch: (None, None, f(batch))
-    return fold(_f, None, data, show_progress=show_progress, backend=backend)[2]
+def laxmean(f, data, batch_size=1, show_progress=False, backend="lax"):
+    def _f(_,batch):
+        out_tree = vmap(f)(batch)
+        reduced_tree = jax.tree_map(lambda x: x.mean(0),out_tree)
+        return (None,None,reduced_tree)
+    batches = batch_split(data,batch_size=batch_size)
+    return fold(_f, None, batches, show_progress=show_progress, backend=backend)[2]
