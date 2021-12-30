@@ -1,5 +1,5 @@
 import jax
-from jax import numpy as jnp
+from jax import numpy as jnp, vmap
 import numpy as np
 from jax import lax
 from functools import reduce
