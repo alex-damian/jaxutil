@@ -24,7 +24,7 @@ class RNG:
         return rng
 
     def __getattr__(self, name):
-        return partial(getattr(jax.random, name), key=self.next_rng())
+        return partial(getattr(jax.random, name), self.next_rng())
 
 
 def auto_cpu(x64=True):
