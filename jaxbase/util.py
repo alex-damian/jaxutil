@@ -5,8 +5,26 @@ from jax import lax
 from functools import reduce
 from jax.experimental.host_callback import id_tap
 from tqdm.auto import tqdm, trange
+from functools import partial
 import GPUtil
 import os
+
+
+class RNG:
+    def __init__(self, seed=None, rng=None):
+        if seed is not None:
+            self.rng = jax.random.PRNGKey(seed)
+        elif rng is not None:
+            self.rng = rng
+        else:
+            raise Exception("RNG expects either a seed or an rng key.")
+
+    def next_rng(self):
+        self.rng, rng = jax.random.split(self.rng)
+        return rng
+
+    def __getattr__(self, name):
+        return partial(getattr(jax.random, name), key=self.next_rng())
 
 
 def auto_cpu(x64=True):
