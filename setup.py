@@ -10,5 +10,5 @@ setup(
     license="MIT",
     keywords="jax",
     # url = "http://packages.python.org/an_example_pypi_project",
-    install_requires=["jax", "flax", "tensorflow-datasets", "jax-resnet"],
+    install_requires=["jax", "flax", "tensorflow-datasets", "jax-resnet", "GPUtil"],
 )

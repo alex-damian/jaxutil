@@ -5,6 +5,19 @@ from jax import lax
 from functools import reduce
 from jax.experimental.host_callback import id_tap
 from tqdm.auto import tqdm, trange
+import GPUtil
+import os
+
+
+def auto_cpu(x64=True):
+    jax.config.update("jax_platform_name", "cpu")
+    if x64:
+        jax.config.update("jax_enable_x64", True)
+
+
+def auto_gpu():
+    deviceID = GPUtil.getFirstAvailable(verbose=True)[0]
+    os.environ["CUDA_VISIBLE_DEVICES"] = str(deviceID)
 
 
 def clean_dict(d):
@@ -108,9 +121,10 @@ def fold(f, state, data, show_progress=False, backend="lax"):
 
 
 def laxmean(f, data, batch_size=1, show_progress=False, backend="lax"):
-    def _f(_,batch):
+    def _f(_, batch):
         out_tree = vmap(f)(batch)
-        reduced_tree = jax.tree_map(lambda x: x.mean(0),out_tree)
-        return (None,None,reduced_tree)
-    batches = batch_split(data,batch_size=batch_size)
+        reduced_tree = jax.tree_map(lambda x: x.mean(0), out_tree)
+        return (None, None, reduced_tree)
+
+    batches = batch_split(data, batch_size=batch_size)
     return fold(_f, None, batches, show_progress=show_progress, backend=backend)[2]
