@@ -2,7 +2,7 @@ from jax import numpy as jnp, lax
 from jax.numpy import linalg as jla
 
 
-def ridge(x, y, reg):
+def ridge(x, y, reg=0):
     dtype = x.dtype
     m, n = x.shape
     rcond = jnp.finfo(dtype).eps * max(n, m)
