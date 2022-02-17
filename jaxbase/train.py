@@ -12,7 +12,7 @@ def GD(loss, p0, steps, return_loss=True, **kwargs):
             grads = jax.grad(loss)(p)
         return p, step_loss, None
 
-    fold_output = fold(step, p0, jnp.arange(steps))
+    fold_output = fold(step, p0, jnp.arange(steps), **kwargs)
     if return_loss:
         return fold_output[:2]
     else:
