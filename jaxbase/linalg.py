@@ -12,7 +12,7 @@ def ridge(x, y, reg=0):
     def ridge_problem(reg):
         mask = s * s + reg >= (rcond * s[0]) ** 2
         safe_s = jnp.where(mask, s, 1)
-        s_ridge = jnp.where(mask, safe_s / (safe_s**2 + reg), 0)[:, jnp.newaxis]
+        s_ridge = jnp.where(mask, safe_s / (safe_s**2 + reg), 0)
         return jnp.matmul(vt.conj().T, s_ridge * uTy, precision=lax.Precision.HIGHEST)
 
     if jnp.ndim(reg) == 0:
