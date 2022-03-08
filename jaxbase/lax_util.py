@@ -126,17 +126,18 @@ def laxmap(f, data, batch_size=None, **kwargs):
         return flat_out
 
 
-def laxmean(f, data, batch_size=None, **kwargs):
+def laxmean(f, data, batch_size=None, unpack=True, **kwargs):
+    _f = lambda x: f(*x) if unpack else f
     if batch_size == None:
-        return fold(lambda _, x: dict(avg=f(x)), None, data, **kwargs)["avg"]
+        return fold(lambda _, x: dict(avg=_f(x)), None, data, **kwargs)["avg"]
     else:
 
-        def _f(batch):
-            out_tree = vmap(f)(batch)
+        def batched_f(batch):
+            out_tree = vmap(_f)(batch)
             reduced_tree = jax.tree_map(lambda x: x.mean(0), out_tree)
             return dict(avg=reduced_tree)
 
         batches = batch_split(data, batch_size=batch_size)
-        return fold(lambda _, batch: dict(avg=_f(batch)), None, batches, **kwargs)[
-            "avg"
-        ]
+        return fold(
+            lambda _, batch: dict(avg=batched_f(batch)), None, batches, **kwargs
+        )["avg"]
