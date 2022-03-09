@@ -138,6 +138,4 @@ def laxmean(f, data, batch_size=None, unpack=True, **kwargs):
             return dict(avg=reduced_tree)
 
         batches = batch_split(data, batch_size=batch_size)
-        return fold(
-            lambda _, batch: dict(avg=batched_f(batch)), None, batches, **kwargs
-        )["avg"]
+        return fold(lambda _, batch: batched_f(batch), None, batches, **kwargs)["avg"]
