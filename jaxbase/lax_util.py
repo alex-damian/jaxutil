@@ -127,7 +127,7 @@ def laxmap(f, data, batch_size=None, **kwargs):
 
 
 def laxmean(f, data, batch_size=None, unpack=True, **kwargs):
-    _f = lambda x: f(*x) if unpack else f
+    _f = (lambda x: f(*x)) if unpack else f
     if batch_size == None:
         return fold(lambda _, x: dict(avg=_f(x)), None, data, **kwargs)["avg"]
     else:
