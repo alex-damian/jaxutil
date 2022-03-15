@@ -68,7 +68,7 @@ def fold(
         first_batch = None
     _f = _fold_clean(_f)
     if jit:
-        _f = jit(_f)
+        _f = jax.jit(_f)
 
     if backend == "lax":
         output_tree = jax.eval_shape(lambda args: _f(*args), (state, first_batch))
