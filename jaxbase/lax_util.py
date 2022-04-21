@@ -56,7 +56,7 @@ def _fold_clean(f):
 
 
 def fold(
-    f, state, data=None, steps=None, backend="lax", jit=False, show_progress=False
+    f, state, data=None, steps=None, backend="python", jit=False, show_progress=False
 ):
     if data is not None:
         n = len(jax.tree_leaves(data)[0])

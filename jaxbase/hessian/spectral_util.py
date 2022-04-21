@@ -12,8 +12,8 @@ def trace(A, dim, rng, num_iter=200):
         v = random.rademacher(subrng, (dim,), dtype=jnp.float32)
         estimate = v @ A(v)
         tr += estimate / num_iter
-        var += estimate ** 2 / num_iter
-    var = var - (tr ** 2)
+        var += estimate**2 / num_iter
+    var = var - (tr**2)
     stderr = jnp.sqrt(var / num_iter)
     return tr, stderr
 
@@ -26,10 +26,10 @@ def frobenius_norm(A, dim, rng, num_iter=200):
 def power_iter(A, dim, rng, num_iter=100):
     v = random.normal(rng, (dim,))
     v = v / jla.norm(v)
-    for i in range(num_iter):
+    for _ in range(num_iter):
         Av = A(v)
         v = Av / jla.norm(Av)
-    return v @ A(v)
+    return v @ A(v), v
 
 
 def scipy_iter(A, dim, rng, tol=1e-2):

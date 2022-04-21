@@ -1,6 +1,8 @@
 from jax import numpy as jnp, lax
 from jax.numpy import linalg as jla
 
+cos_dist = lambda x, y: (x @ y) / (jla.norm(x) * jla.norm(y))
+
 
 def ridge(x, y, reg=0, rel_reg=None):
     dtype = x.dtype

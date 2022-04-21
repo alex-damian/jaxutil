@@ -1,9 +1,13 @@
-import jax
-from jax import numpy as jnp
-import numpy as np
-from functools import partial
-import GPUtil
 import os
+from collections import namedtuple
+from functools import partial
+
+import GPUtil
+import jax
+import numpy as np
+from jax import numpy as jnp
+
+qt = lambda **kwargs: namedtuple("tuple", kwargs.keys())(**kwargs)
 
 
 class RNG:
