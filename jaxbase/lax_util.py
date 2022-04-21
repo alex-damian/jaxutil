@@ -19,22 +19,32 @@ def zeros_like_output(f, x):
     )
 
 
-def batch_split(batch, n_batch: int = None, batch_size: int = None, strict=True):
+def batch_split(
+    batch,
+    n_batch: int = None,
+    batch_size: int = None,
+    devices: tuple = None,
+    strict=True,
+):
+    if devices is not None:
+        batches = batch_split(batch, n_batch=len(devices))
+        batches = jax.tree_map(
+            lambda x: jax.device_put_sharded(list(x), devices), batches
+        )
+        return batches
+
     n = len(jax.tree_leaves(batch)[0])
 
-    if n_batch is not None and batch_size is not None:
-        raise Exception("Cannot specify both n_batch and batch_size")
-    elif n_batch is not None:
+    if n_batch is not None:
         batch_size = n // n_batch
     elif batch_size is not None:
         n_batch = n // batch_size
-    else:
-        raise Exception("Need to specify either n_batch or batch_size")
 
     if strict:
         assert n_batch * batch_size == n
     else:
         batch = jax.tree_map(lambda x: x[: n_batch * batch_size], batch)
+
     batches = jax.tree_map(
         lambda x: x.reshape((n_batch, batch_size, *x.shape[1:])), batch
     )
