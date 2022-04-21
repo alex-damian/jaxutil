@@ -85,7 +85,7 @@ def fold(
             fout = _f(state, batch)
             batch_state = fout["state"]
             batch_save = fout["save"]
-            avg = jax.tree_multimap(lambda si, fi: si + fi / n, avg, fout["avg"])
+            avg = jax.tree_map(lambda si, fi: si + fi / n, avg, fout["avg"])
             if show_progress:
                 id_tap(lambda *_: pbar.update(), None)
             return (batch_state, avg), batch_save
@@ -109,7 +109,7 @@ def fold(
             if avg is None:
                 avg = jax.tree_map(lambda si: si / n, fout["avg"])
             else:
-                avg = jax.tree_multimap(lambda si, fi: si + fi / n, avg, fout["avg"])
+                avg = jax.tree_map(lambda si, fi: si + fi / n, avg, fout["avg"])
         save = tree_stack(save)
         return dict(state=state, save=save, avg=avg)
 
