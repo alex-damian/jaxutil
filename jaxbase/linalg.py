@@ -26,9 +26,9 @@ def ridge(x, y, reg=0, rel_reg=None):
         return lax.map(ridge_problem, reg)
 
 
-def eigsh(A, dim, *args):
+def eigsh(A, dim, *args, **kwargs):
     operator = LinearOperator((dim, dim), A)
-    return eigsh(operator, *args)
+    return eigsh(operator, *args, **kwargs)
 
 
 def gram_schmidt(*args):
