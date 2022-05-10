@@ -1,5 +1,6 @@
-from jax import numpy as jnp, lax
+from jax import numpy as jnp, lax, vmap
 from jax.numpy import linalg as jla
+from scipy.sparse.linalg import LinearOperator, eigsh
 
 cos_dist = lambda x, y: (x @ y) / (jla.norm(x) * jla.norm(y))
 
@@ -23,3 +24,15 @@ def ridge(x, y, reg=0, rel_reg=None):
         return ridge_problem(reg)
     else:
         return lax.map(ridge_problem, reg)
+
+
+def eigsh(A, dim, *args):
+    operator = LinearOperator((dim, dim), A)
+    return eigsh(operator, *args)
+
+
+def gram_schmidt(*args):
+    subspace = jnp.stack(args, 1)
+    P = jla.qr(subspace)[0].T
+    P = P * jnp.sign(vmap(jnp.dot)(P, subspace.T))[:, None]
+    return P

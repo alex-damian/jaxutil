@@ -1,22 +1,13 @@
 import jax
-from jax import numpy as jnp, vmap
+from jax import numpy as jnp, vmap, tree_map, eval_shape
 from jax import lax
 from jax.experimental.host_callback import id_tap
 from tqdm.auto import tqdm, trange
+from jaxbase.tree_util import *
 
 
-def tree_stack(trees):
-    _, treedef = jax.tree_flatten(trees[0])
-    leaf_list = [jax.tree_flatten(tree)[0] for tree in trees]
-    leaf_stacked = [jnp.stack(leaves) for leaves in zip(*leaf_list)]
-    return jax.tree_unflatten(treedef, leaf_stacked)
-
-
-def zeros_like_output(f, x):
-    pytree = jax.eval_shape(f, x)
-    return jax.tree_map(
-        lambda leaf: jnp.zeros(shape=leaf.shape, dtype=leaf.dtype), pytree
-    )
+def unpack(f):
+    return lambda args: f(*args)
 
 
 def batch_split(
@@ -28,9 +19,7 @@ def batch_split(
 ):
     if devices is not None:
         batches = batch_split(batch, n_batch=len(devices))
-        batches = jax.tree_map(
-            lambda x: jax.device_put_sharded(list(x), devices), batches
-        )
+        batches = tree_map(lambda x: jax.device_put_sharded(list(x), devices), batches)
         return batches
 
     n = len(jax.tree_leaves(batch)[0])
@@ -43,85 +32,93 @@ def batch_split(
     if strict:
         assert n_batch * batch_size == n
     else:
-        batch = jax.tree_map(lambda x: x[: n_batch * batch_size], batch)
+        batch = tree_map(lambda x: x[: n_batch * batch_size], batch)
 
-    batches = jax.tree_map(
-        lambda x: x.reshape((n_batch, batch_size, *x.shape[1:])), batch
-    )
+    batches = tree_map(lambda x: x.reshape((n_batch, batch_size, *x.shape[1:])), batch)
     return batches
 
 
-def _fold_clean(f):
+def fold_clean(f, save=True):
     def clean_f(state, batch):
         fout = f(state, batch)
-        if "state" not in fout:
-            fout["state"] = None
-        if "save" not in fout:
+        for key in ["state", "save", "avg", "add"]:
+            if key not in fout:
+                fout[key] = None
+        if save == False:
             fout["save"] = None
-        if "avg" not in fout:
-            fout["avg"] = None
         return fout
 
     return clean_f
 
 
 def fold(
-    f, state, data=None, steps=None, backend="python", jit=False, show_progress=False
+    f,
+    state,
+    data=None,
+    steps=None,
+    backend="python",
+    jit=False,
+    show_progress=False,
+    save_every=1,
 ):
-    if data is not None:
-        n = len(jax.tree_leaves(data)[0])
-        first_batch = jax.tree_map(lambda x: x[0], data)
-        _f = f
-    else:
-        n = steps
-        _f = lambda state, _: f(state)
-        first_batch = None
-    _f = _fold_clean(_f)
+    n = tree_len(data) if data is not None else steps
+    x0 = tree_idx(data, 0) if data is not None else None
+    f_save = (lambda state, _: f(state)) if data is None else f
+    f_nosave = fold_clean(f_save, save=False)
+    f_save = fold_clean(f_save, save=True)
     if jit:
-        _f = jax.jit(_f)
+        f_ = jax.jit(f_)
 
     if backend == "lax":
-        output_tree = jax.eval_shape(lambda args: _f(*args), (state, first_batch))
-        avg_init = jax.tree_map(
-            lambda leaf: jnp.zeros(shape=leaf.shape, dtype=leaf.dtype),
-            output_tree["avg"],
-        )
-
+        if save_every != 1:
+            raise Exception("save_every is not compatible with backend lax")
+        out_tree = jax.eval_shape(lambda args: f_save(*args), (state, x0))
+        avg_init = tree_zeros(out_tree["avg"])
+        avg_init = tree_map(lambda x: x * 1.0, avg_init)
+        add_init = tree_zeros(out_tree["add"])
         if show_progress:
             pbar = tqdm(total=n)
 
         def step(carry, batch):
-            state, avg = carry
-            fout = _f(state, batch)
+            state, avg, add = carry
+            fout = f_save(state, batch)
             batch_state = fout["state"]
             batch_save = fout["save"]
-            avg = jax.tree_map(lambda si, fi: si + fi / n, avg, fout["avg"])
+            avg = tree_map(lambda si, fi: si + fi / n, avg, fout["avg"])
+            add = tree_map(lambda si, fi: si + fi, add, fout["add"])
             if show_progress:
                 id_tap(lambda *_: pbar.update(), None)
-            return (batch_state, avg), batch_save
+            return (batch_state, avg, add), batch_save
 
-        (state, avg), save = lax.scan(step, (state, avg_init), xs=data, length=steps)
+        (state, avg, add), save = lax.scan(
+            step, (state, avg_init, add_init), xs=data, length=steps
+        )
         if show_progress:
             pbar.close()
-        return dict(state=state, save=save, avg=avg)
+        return dict(state=state, save=save, avg=avg, add=add)
     elif backend == "python":
         iterator = trange(n) if show_progress else range(n)
         avg = None
+        add = None
         save = []
         for i in iterator:
-            if data is not None:
-                batch = jax.tree_map(lambda x: x[i], data)
+            batch = tree_idx(data, i) if data is not None else None
+            if i % save_every == 0:
+                fout = f_save(state, batch)
+                save.append(fout["save"])
             else:
-                batch = None
-            fout = _f(state, batch)
+                fout = f_nosave(state, batch)
             state = fout["state"]
-            save.append(fout["save"])
             if avg is None:
-                avg = jax.tree_map(lambda si: si / n, fout["avg"])
+                avg = tree_map(lambda si: si / n, fout["avg"])
             else:
-                avg = jax.tree_map(lambda si, fi: si + fi / n, avg, fout["avg"])
+                avg = tree_map(lambda si, fi: si + fi / n, avg, fout["avg"])
+            if add is None:
+                add = fout["add"]
+            else:
+                add = tree_map(lambda si, fi: si + fi, add, fout["add"])
         save = tree_stack(save)
-        return dict(state=state, save=save, avg=avg)
+        return dict(state=state, save=save, avg=avg, add=add)
 
 
 def laxmap(f, data, batch_size=None, **kwargs):
@@ -132,7 +129,7 @@ def laxmap(f, data, batch_size=None, **kwargs):
         batched_out = fold(
             lambda _, batch: dict(save=vmap(f)(batch)), None, batches, **kwargs
         )["save"]
-        flat_out = jax.tree_map(lambda x: x.reshape(-1, *x.shape[2:]), batched_out)
+        flat_out = tree_map(lambda x: x.reshape(-1, *x.shape[2:]), batched_out)
         return flat_out
 
 
@@ -144,8 +141,23 @@ def laxmean(f, data, batch_size=None, unpack=True, **kwargs):
 
         def batched_f(batch):
             out_tree = vmap(_f)(batch)
-            reduced_tree = jax.tree_map(lambda x: x.mean(0), out_tree)
+            reduced_tree = tree_map(lambda x: x.mean(0), out_tree)
             return dict(avg=reduced_tree)
+
+        batches = batch_split(data, batch_size=batch_size)
+        return fold(lambda _, batch: batched_f(batch), None, batches, **kwargs)["avg"]
+
+
+def laxsum(f, data, batch_size=None, unpack=True, **kwargs):
+    _f = (lambda x: f(*x)) if unpack else f
+    if batch_size == None:
+        return fold(lambda _, x: dict(add=_f(x)), None, data, **kwargs)["avg"]
+    else:
+
+        def batched_f(batch):
+            out_tree = vmap(_f)(batch)
+            reduced_tree = tree_map(lambda x: x.sum(0), out_tree)
+            return dict(add=reduced_tree)
 
         batches = batch_split(data, batch_size=batch_size)
         return fold(lambda _, batch: batched_f(batch), None, batches, **kwargs)["avg"]
