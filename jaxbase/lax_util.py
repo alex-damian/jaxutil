@@ -67,7 +67,8 @@ def fold(
     f_nosave = fold_clean(f_save, save=False)
     f_save = fold_clean(f_save, save=True)
     if jit:
-        f_ = jax.jit(f_)
+        f_save = jax.jit(f_save)
+        f_nosave = jax.jit(f_nosave)
 
     if backend == "lax":
         if save_every != 1:
