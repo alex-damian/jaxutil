@@ -1,6 +1,6 @@
 from jax import numpy as jnp, lax, vmap
 from jax.numpy import linalg as jla
-from scipy.sparse.linalg import LinearOperator, eigsh
+import scipy
 
 cos_dist = lambda x, y: (x @ y) / (jla.norm(x) * jla.norm(y))
 
@@ -27,8 +27,8 @@ def ridge(x, y, reg=0, rel_reg=None):
 
 
 def eigsh(A, dim, *args, **kwargs):
-    operator = LinearOperator((dim, dim), A)
-    return eigsh(operator, *args, **kwargs)
+    operator = scipy.sparse.linalg.LinearOperator((dim, dim), A)
+    return scipy.sparse.linalg.eigsh(operator, *args, **kwargs)
 
 
 def gram_schmidt(*args):
