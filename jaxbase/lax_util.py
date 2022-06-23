@@ -134,14 +134,13 @@ def laxmap(f, data, batch_size=None, **kwargs):
         return flat_out
 
 
-def laxmean(f, data, batch_size=None, unpack=True, **kwargs):
-    _f = (lambda x: f(*x)) if unpack else f
+def laxmean(f, data, batch_size=None, **kwargs):
     if batch_size == None:
-        return fold(lambda _, x: dict(avg=_f(x)), None, data, **kwargs)["avg"]
+        return fold(lambda _, x: dict(avg=f(x)), None, data, **kwargs)["avg"]
     else:
 
         def batched_f(batch):
-            out_tree = vmap(_f)(batch)
+            out_tree = vmap(f)(batch)
             reduced_tree = tree_map(lambda x: x.mean(0), out_tree)
             return dict(avg=reduced_tree)
 
@@ -149,14 +148,13 @@ def laxmean(f, data, batch_size=None, unpack=True, **kwargs):
         return fold(lambda _, batch: batched_f(batch), None, batches, **kwargs)["avg"]
 
 
-def laxsum(f, data, batch_size=None, unpack=True, **kwargs):
-    _f = (lambda x: f(*x)) if unpack else f
+def laxsum(f, data, batch_size=None, **kwargs):
     if batch_size == None:
-        return fold(lambda _, x: dict(add=_f(x)), None, data, **kwargs)["avg"]
+        return fold(lambda _, x: dict(add=f(x)), None, data, **kwargs)["avg"]
     else:
 
         def batched_f(batch):
-            out_tree = vmap(_f)(batch)
+            out_tree = vmap(f)(batch)
             reduced_tree = tree_map(lambda x: x.sum(0), out_tree)
             return dict(add=reduced_tree)
 
