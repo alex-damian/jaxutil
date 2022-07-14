@@ -44,6 +44,6 @@ def data_aug(batch, rng):
         return x
 
     flip_rng, crop_rng = random.split(rng)
-    flips = random.uniform(rng, (len(x),)) > 0.5
-    crops = random.randint(rng, (len(x), 2), 0, 9)
+    flips = random.uniform(flip_rng, (len(x),)) > 0.5
+    crops = random.randint(crop_rng, (len(x), 2), 0, 9)
     return vmap(_augment)(x, flips, crops), y

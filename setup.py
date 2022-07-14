@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="jaxbase",
+    name="jaxutil",
     packages=find_packages(),
     version="0.3.0",
     author="Alex Damian",
