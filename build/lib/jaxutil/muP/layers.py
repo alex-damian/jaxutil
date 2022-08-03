@@ -6,6 +6,7 @@ class muLinear(nn.Module):
     features: int
     head: bool = False
     gain: float = 2
+    use_bias: bool = True
 
     @nn.compact
     def __call__(self, x):
@@ -15,5 +16,8 @@ class muLinear(nn.Module):
             scales = (jnp.sqrt(self.gain / x.shape[-1]), 1 / jnp.sqrt(self.features))
         w_init = nn.initializers.normal(stddev=jnp.sqrt(scales[0] * scales[1]))
         w = self.param("w", w_init, (x.shape[-1], self.features))
-        b = self.param("b", nn.initializers.zeros, (self.features,))
-        return (x @ w) * jnp.sqrt(scales[0] / scales[1]) + b
+        out = (x @ w) * jnp.sqrt(scales[0] / scales[1])
+        if self.use_bias:
+            b = self.param("b", nn.initializers.zeros, (self.features,))
+            out += b
+        return out
