@@ -6,6 +6,15 @@ import GPUtil
 import jax
 import numpy as np
 from jax import numpy as jnp
+from jax.flatten_util import ravel_pytree
+
+
+def flat_init(model, *args, **kwargs):
+    params = model.init(*args, **kwargs)
+    params, unravel = ravel_pytree(params)
+    f = lambda p, *args, **kwargs: model.apply(unravel(p), *args, **kwargs)
+    return f, params, unravel
+
 
 qt = lambda **kwargs: namedtuple("tuple", kwargs.keys())(**kwargs)
 
