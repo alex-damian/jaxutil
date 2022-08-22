@@ -144,7 +144,7 @@ def laxsum(f, data, batch_size=None, **kwargs):
             lambda avg, x: (tree_add(avg, f(x)), None), avg_init, data, **kwargs
         )[0]
     else:
-        print(vmap)
+
         def batched_f(batch):
             out_tree = vmap(f)(batch)
             reduced_tree = tree_map(lambda x: x.sum(0), out_tree)
