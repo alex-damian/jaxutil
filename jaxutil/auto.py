@@ -1,6 +1,9 @@
 import jax
 from jax import numpy as jnp, vmap, jit, lax, random
 from jax.numpy import linalg as jla
+from flax import linen as nn
+import numpy as np
+from numpy import linalg as la
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm, trange
 from .derivatives import D
