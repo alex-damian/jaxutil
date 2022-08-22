@@ -6,6 +6,8 @@ import numpy as np
 from numpy import linalg as la
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm, trange
+from collections import namedtuple
+from functools import partial
 from .derivatives import D
 from .lax_util import (
     batch_split,
