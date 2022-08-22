@@ -4,25 +4,25 @@ from jax.numpy import linalg as jla
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm, trange
 from .derivatives import D
-from lax_util import (
+from .lax_util import (
     batch_split,
     fold,
     laxmap,
     laxsum,
     laxmean,
 )
-from linalg import (
+from .linalg import (
     cos_dist,
     ridge,
     eigsh,
     orthogonalize,
 )
-from poly import (
+from .poly import (
     factorial,
     factorial2,
     He,
 )
-from tree import (
+from .tree import (
     tree_map,
     tree_idx,
     tree_len,
@@ -31,11 +31,11 @@ from tree import (
     tree_mul,
     tree_stack,
 )
-from util import (
+from .util import (
     RNG,
     flat_init,
     qt,
     clean_dict,
     unpack,
 )
-from setup import jax_setup
+from .setup import jax_setup
