@@ -10,7 +10,7 @@ tree_zeros = lambda tree: tree_map(
     lambda leaf: jnp.zeros(shape=leaf.shape, dtype=leaf.dtype), tree
 )
 
-tree_add = lambda *args: tree_map(sum, args)
+tree_add = lambda x,y: tree_map(lambda x,y: x+y, x,y)
 tree_mul = lambda x, c: tree_map(lambda xi: xi * c, x)
 
 
