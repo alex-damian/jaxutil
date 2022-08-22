@@ -137,8 +137,8 @@ def laxmap(f, data, batch_size=None, **kwargs):
 
 
 def laxsum(f, data, batch_size=None, **kwargs):
+    avg_init = tree_zeros(eval_shape(f, tree_idx(data, 0)))
     if batch_size == None:
-        avg_init = tree_zeros(eval_shape(f, tree_idx(data, 0)))
         return fold(
             lambda avg, x: (tree_add(avg, f(x)), None), avg_init, data, **kwargs
         )[0]
@@ -146,8 +146,7 @@ def laxsum(f, data, batch_size=None, **kwargs):
 
         def batched_f(batch):
             out_tree = vmap(f)(batch)
-            reduced_tree = tree_map(lambda x: x.sum(0), out_tree)
-            return (reduced_tree, None)
+            return tree_map(lambda x: x.sum(0), out_tree)
 
         batches = batch_split(data, batch_size=batch_size)
         avg_init = tree_zeros(eval_shape(f, tree_idx(batches, 0)))
