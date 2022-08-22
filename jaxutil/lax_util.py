@@ -1,6 +1,5 @@
 import jax
-from jax import numpy as vmap, tree_map, eval_shape
-from jax import lax
+from jax import vmap, eval_shape, lax
 from jax.experimental.host_callback import id_tap
 from tqdm.auto import tqdm
 from .tree import *
@@ -19,7 +18,7 @@ def batch_split(
         batches = tree_map(lambda x: jax.device_put_sharded(list(x), devices), batches)
         return batches
 
-    n = len(jax.tree_leaves(batch)[0])
+    n = tree_len(batch)
 
     if n_batch is not None:
         batch_size = n // n_batch
@@ -141,7 +140,9 @@ def laxsum(f, data, batch_size=None, **kwargs):
     x0 = tree_idx(data, 0)
     avg_init = tree_zeros(eval_shape(f, x0))
     if batch_size == None:
-        return fold(lambda avg, x: (avg + f(x), None), avg_init, data, **kwargs)[0]
+        return fold(
+            lambda avg, x: (tree_add(avg, f(x)), None), avg_init, data, **kwargs
+        )[0]
     else:
 
         def batched_f(batch):
@@ -151,7 +152,7 @@ def laxsum(f, data, batch_size=None, **kwargs):
 
         batches = batch_split(data, batch_size=batch_size)
         return fold(
-            lambda avg, batch: (avg + batched_f(batch), None),
+            lambda avg, batch: (tree_add(avg, batched_f(batch)), None),
             avg_init,
             batches,
             **kwargs
