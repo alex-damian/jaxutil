@@ -31,8 +31,11 @@ def eigsh(A, dim, *args, **kwargs):
     return scipy.sparse.linalg.eigsh(operator, *args, **kwargs)
 
 
-def gram_schmidt(*args):
-    subspace = jnp.stack(args, 1)
-    P = jla.qr(subspace)[0].T
-    P = P * jnp.sign(vmap(jnp.dot)(P, subspace.T))[:, None]
-    return P
+def orthogonalize(X, axis="col"):
+    assert axis in ["row", "col"]
+    if axis == "col":
+        Q, R = jla.qr(X)
+        Q = Q * jnp.sign(jnp.diag(R))
+        return Q
+    elif axis == "row":
+        return orthogonalize(X.T).T

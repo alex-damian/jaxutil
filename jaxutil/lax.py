@@ -7,10 +7,6 @@ from .tree import *
 from inspect import signature
 
 
-def unpack(f):
-    return lambda args: f(*args)
-
-
 def batch_split(
     batch,
     n_batch: int = None,
