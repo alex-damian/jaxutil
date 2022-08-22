@@ -1,10 +1,11 @@
 import jax
 from jax import numpy as jnp, vmap, jit, lax, random
+from jax.numpy import linalg as jla
 from matplotlib import pyplot as plt
 from tqdm.auto import tqdm, trange
-
+from derivatives import *
 from derivatives import D
-from lax import (
+from lax_util import (
     batch_split,
     fold,
     laxmap,
