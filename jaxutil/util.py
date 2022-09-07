@@ -34,11 +34,17 @@ class RNG:
     def __getattr__(self, name):
         return partial(getattr(jax.random, name), self.next())
 
+
 def clean_dict(d):
     return {
         key: val.item() if isinstance(val, (np.ndarray, jnp.ndarray)) else val
         for key, val in d.items()
     }
 
+
 def unpack(f):
     return lambda args: f(*args)
+
+
+def print_xla(f, *args, **kwargs):
+    print(jax.xla_computation(f)(*args, **kwargs).as_hlo_text())
