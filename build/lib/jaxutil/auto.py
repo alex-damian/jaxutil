@@ -25,7 +25,6 @@ from .lax_util import (
 from .linalg import (
     cos_dist,
     ridge,
-    eigsh,
     orthogonalize,
 )
 from .poly import (
