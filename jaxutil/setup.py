@@ -11,7 +11,7 @@ def jax_setup(device="auto", x64=False, n_gpu=1):
         jax.config.update("jax_platform_name", "cpu")
     elif device.lower() == "gpu":
         devices = GPUtil.getAvailable(limit=float("inf"))
-        devices = [str(x - 1) for x in devices]
+        devices = [str(x) for x in devices]
         print(f"Available Devices: {','.join(devices)}")
         if len(devices) < n_gpu:
             raise Exception(
