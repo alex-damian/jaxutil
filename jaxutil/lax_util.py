@@ -1,10 +1,18 @@
 import jax
-from jax import vmap, eval_shape, lax
+from jax import numpy as jnp, vmap, eval_shape, lax
 from jax.experimental.host_callback import id_tap
 from tqdm.auto import tqdm
-from .tree import *
 from inspect import signature
+from jax.tree_util import tree_leaves, tree_flatten, tree_unflatten
+from jaxopt.tree_util import *
 
+tree_len = lambda tree: len(tree_leaves(tree)[0])
+
+def tree_stack(trees):
+    _, treedef = tree_flatten(trees[0])
+    leaf_list = [tree_flatten(tree)[0] for tree in trees]
+    leaf_stacked = [jnp.stack(leaves) for leaves in zip(*leaf_list)]
+    return tree_unflatten(treedef, leaf_stacked)
 
 def batch_split(
     batch,
@@ -65,7 +73,7 @@ def fold(
             pbar = tqdm(total=n_batch)
         save_list = []
         for i in range(n_batch * save_every):
-            batch = tree_idx(data, i) if data is not None else None
+            batch = tree_map(lambda x: x[i], data) if data is not None else None
             if i % save_every == 0:
                 state, save = save_step(state, batch)
                 save_list.append(save)
@@ -137,7 +145,7 @@ def laxmap(f, data, batch_size=None, **kwargs):
 
 
 def laxsum(f, data, batch_size=None, **kwargs):
-    avg_init = tree_zeros(eval_shape(f, tree_idx(data, 0)))
+    avg_init = tree_zeros_like(eval_shape(f, tree_map(lambda x: x[0],data)))
     if batch_size == None:
         return fold(
             lambda avg, x: (tree_add(avg, f(x)), None), avg_init, data, **kwargs

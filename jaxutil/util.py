@@ -1,4 +1,3 @@
-import os
 from collections import namedtuple
 from functools import partial
 
@@ -6,6 +5,7 @@ import jax
 import numpy as np
 from jax import numpy as jnp
 from jax.flatten_util import ravel_pytree
+from jax.tree_util import register_pytree_node
 
 
 def flat_init(model, *args, **kwargs):
@@ -28,11 +28,21 @@ class RNG:
             raise Exception("RNG expects either a seed or random key.")
 
     def next(self, n_keys=1):
-        self.key, *keys = jax.random.split(self.key, n_keys + 1)
-        return keys[0] if len(keys) == 1 else keys
+        if n_keys > 1:
+            return jax.random.split(self.next(), n_keys)
+        else:
+            self.key, key = jax.random.split(self.key)
+            return key
 
     def __getattr__(self, name):
         return partial(getattr(jax.random, name), self.next())
+
+
+register_pytree_node(
+    RNG,
+    lambda rng: ((rng.key,), None),
+    lambda _, c: RNG(key=c[0]),
+)
 
 
 def clean_dict(d):
