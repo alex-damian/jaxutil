@@ -169,5 +169,5 @@ def laxsum(f, data, batch_size=None, **kwargs):
 
 def laxmean(f, data, *args, **kwargs):
     n = tree_len(data)
-    _f = lambda *args: tree_scalar_mul(f(*args), 1 / n)
+    _f = lambda *args: tree_scalar_mul(1 / n, f(*args))
     return laxsum(_f, data, *args, **kwargs)
