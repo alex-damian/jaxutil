@@ -8,11 +8,13 @@ from jaxopt.tree_util import *
 
 tree_len = lambda tree: len(tree_leaves(tree)[0])
 
+
 def tree_stack(trees):
     _, treedef = tree_flatten(trees[0])
     leaf_list = [tree_flatten(tree)[0] for tree in trees]
     leaf_stacked = [jnp.stack(leaves) for leaves in zip(*leaf_list)]
     return tree_unflatten(treedef, leaf_stacked)
+
 
 def batch_split(
     batch,
@@ -145,7 +147,7 @@ def laxmap(f, data, batch_size=None, **kwargs):
 
 
 def laxsum(f, data, batch_size=None, **kwargs):
-    avg_init = tree_zeros_like(eval_shape(f, tree_map(lambda x: x[0],data)))
+    avg_init = tree_zeros_like(eval_shape(f, tree_map(lambda x: x[0], data)))
     if batch_size == None:
         return fold(
             lambda avg, x: (tree_add(avg, f(x)), None), avg_init, data, **kwargs
@@ -167,5 +169,5 @@ def laxsum(f, data, batch_size=None, **kwargs):
 
 def laxmean(f, data, *args, **kwargs):
     n = tree_len(data)
-    _f = lambda *args: tree_mul(f(*args), 1 / n)
+    _f = lambda *args: tree_scalar_mul(f(*args), 1 / n)
     return laxsum(_f, data, *args, **kwargs)
