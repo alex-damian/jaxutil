@@ -71,14 +71,14 @@ def _D(f, x, order=1, *vs, return_all=False):
 
     def Df(x):
         if return_all:
-            if v == None:
+            if v is None:
                 jac, hist = smart_jacobian(f, has_aux=True)(x)
                 return jac, (*hist, jac)
             else:
                 _, jac, hist = jvp(f, [x], [v], has_aux=True)
                 return jac, (*hist, jac)
         else:
-            if v == None:
+            if v is None:
                 return smart_jacobian(f)(x)
             else:
                 return jvp(f, [x], [v])[1]
