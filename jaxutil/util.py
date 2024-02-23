@@ -6,7 +6,6 @@ import numpy as np
 from jax import numpy as jnp
 from jax.flatten_util import ravel_pytree
 from jax.tree_util import register_pytree_node
-from types import SimpleNamespace
 
 def flat_init(model, *args, **kwargs):
     params = model.init(*args, **kwargs)
@@ -14,14 +13,17 @@ def flat_init(model, *args, **kwargs):
     f = lambda p, *args, **kwargs: model.apply(unravel(p), *args, **kwargs)
     return f, params, unravel
 
+class ddict(dict):
+    __getattr__ = dict.get
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
+
 register_pytree_node(
-    SimpleNamespace,
-    lambda x: (x.__dict__.values(), x.__dict__.keys()),
-    lambda k, v: SimpleNamespace(**dict(zip(k, v))),
+    ddict,
+    lambda x: (tuple(x.values()), tuple(x.keys())),
+    lambda keys, values: ddict(zip(keys, values)),
 )
-
-qt = SimpleNamespace
-
 
 class RNG:
     def __init__(self, seed=None, key=None):
