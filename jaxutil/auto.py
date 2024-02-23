@@ -39,7 +39,7 @@ from .poly import (
 from .util import (
     RNG,
     flat_init,
-    qt,
+    ddict,
     clean_dict,
     unpack,
     print_xla,
