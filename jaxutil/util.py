@@ -1,5 +1,5 @@
 from collections import namedtuple
-from functools import partial
+from functools import partial, wraps
 
 import jax
 import numpy as np
@@ -63,5 +63,8 @@ def unpack(f):
     return lambda args: f(*args)
 
 
-def print_xla(f, *args, **kwargs):
-    print(jax.xla_computation(f)(*args, **kwargs).as_hlo_text())
+def print_xla(f):
+    @wraps(f)
+    def xla_f(*args,**kwargs):
+        print(jax.xla_computation(f)(*args, **kwargs).as_hlo_text())
+    return xla_f
