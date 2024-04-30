@@ -1,6 +1,7 @@
 import jax
 from jax import numpy as jnp, vmap, jit, lax, random as jr, tree_util as jtu
 from jax.numpy import linalg as jla
+from jax.flatten_util import ravel_pytree
 from flax import linen as nn
 import numpy as np
 from numpy import linalg as la
