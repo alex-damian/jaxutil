@@ -1,6 +1,4 @@
-import jax
-from jax import numpy as jnp, lax
-import numpy as np
+from jax import numpy as jnp
 from numpy.polynomial.hermite_e import herme2poly
 
 

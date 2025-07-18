@@ -1,10 +1,20 @@
-import jax
-from jax import numpy as jnp, vmap, eval_shape, lax
-from jax.experimental.host_callback import id_tap
-from tqdm.auto import tqdm
+from functools import wraps
 from inspect import signature
-from jax.tree_util import tree_leaves, tree_flatten, tree_unflatten
-from jaxopt.tree_util import *
+from typing import Callable, Optional, TypeVar
+
+import jax
+from jax import eval_shape, lax
+from jax import numpy as jnp
+from jax import vmap
+from jax.experimental.host_callback import id_tap
+from jax.tree_util import tree_flatten, tree_leaves, tree_map, tree_unflatten
+from jax_tqdm.scan_pbar import scan_tqdm
+from jaxopt.tree_util import tree_add, tree_scalar_mul
+from tqdm.auto import trange
+
+Carry = TypeVar("Carry")
+X = TypeVar("X")
+Y = TypeVar("Y")
 
 tree_len = lambda tree: len(tree_leaves(tree)[0])
 
@@ -18,9 +28,9 @@ def tree_stack(trees):
 
 def batch_split(
     batch,
-    n_batch: int = None,
-    batch_size: int = None,
-    devices: tuple = None,
+    n_batch: Optional[int] = None,
+    batch_size: Optional[int] = None,
+    devices: Optional[tuple] = None,
     strict=True,
 ):
     if devices is not None:
@@ -35,6 +45,8 @@ def batch_split(
     elif batch_size is not None:
         n_batch = n // batch_size
 
+    assert isinstance(n_batch, int) and isinstance(batch_size, int)
+
     if strict:
         assert n_batch * batch_size == n
     else:
@@ -45,100 +57,69 @@ def batch_split(
 
 
 def fold(
-    f,
+    f: Callable[[Carry, X], tuple[Carry, Y]],
     state,
-    data=None,
-    steps=None,
+    xs=None,
+    length=None,
     backend="python",
     jit=False,
     show_progress=False,
     save_every=1,
-):
-    if len(signature(f).parameters) == 1:
-        save_step = lambda state, x: f(state)
-    elif len(signature(f).parameters) == 2:
-        save_step = f
-    else:
-        raise Exception("Fold function must take either one or two arguments.")
+) -> tuple[Carry, Y]:
+    fast_step = lambda state, x: (f(state, x)[0], None)
 
-    step = lambda state, x: (save_step(state, x)[0], None)
+    assert xs is not None or length is not None
+    if xs is None:
+        xs = jnp.arange(length)
+
     if jit:
-        save_step = jax.jit(save_step)
-        step = jax.jit(step)
+        f = jax.jit(f)
+        fast_step = jax.jit(fast_step)
 
-    n = tree_len(data) if data is not None else steps
-    n_batch = n // save_every
+    n = tree_len(xs)
 
     if backend == "python":
-        n = tree_len(data) if data is not None else steps
-        if show_progress:
-            pbar = tqdm(total=n_batch)
+        idx = trange(n) if show_progress else range(n)
         save_list = []
-        for i in range(n_batch * save_every):
-            batch = tree_map(lambda x: x[i], data) if data is not None else None
+        for i in idx:
+            batch = tree_map(lambda x: x[i], xs)
             if i % save_every == 0:
-                state, save = save_step(state, batch)
+                state, save = f(state, batch)
                 save_list.append(save)
-                if show_progress:
-                    pbar.update()
             else:
-                state, _ = step(state, batch)
+                state, _ = fast_step(state, batch)
         save_list = tree_stack(save_list)
-        if show_progress:
-            pbar.close()
         return state, save_list
 
     elif backend == "lax":
-        n = tree_len(data) if data is not None else steps
-        n_batch = n // save_every
-        if show_progress:
-            pbar = tqdm(total=n_batch)
-        if data is not None:
-            if save_every > 1:
-                data = batch_split(data, batch_size=save_every, strict=False)
+        if save_every > 1:
+            xs = batch_split(xs, batch_size=save_every, strict=False)
 
-                def epoch(state, batch):
-                    x0 = tree_map(lambda x: x[0], batch)
-                    state, save = save_step(state, x0)
-
-                    sub_batch = tree_map(lambda x: x[1:], batch)
-                    state = lax.scan(step, state, sub_batch)[0]
-
-                    if show_progress:
-                        id_tap(lambda *_: pbar.update(), None)
-
-                    return state, save
-
-            else:
-
-                def epoch(state, x):
-                    state, save = save_step(state, x)
-                    if show_progress:
-                        id_tap(lambda *_: pbar.update(), None)
-                    return state, save
-
-            output = lax.scan(epoch, state, data)
-        else:
-
-            def epoch(state, _):
-                state, save = save_step(state, None)
-                if save_every > 1:
-                    state = lax.scan(step, state, None, length=save_every - 1)[0]
-                if show_progress:
-                    id_tap(lambda *_: pbar.update(), None)
+            def epoch_fn(state: Carry, batch: X) -> tuple[Carry, Y]:
+                x0 = tree_map(lambda x: x[0], batch)
+                state, save = f(state, x0)
+                sub_batch = tree_map(lambda x: x[1:], batch)
+                state = lax.scan(fast_step, state, sub_batch)[0]
                 return state, save
 
-            output = lax.scan(epoch, state, None, n_batch)
-        if show_progress:
-            pbar.close()
-        return output
+            if show_progress:
+                epoch_fn = scan_tqdm(tree_len(xs))(epoch_fn)
+
+            return lax.scan(epoch_fn, state, xs)
+        else:
+            step_fn = f
+            if show_progress:
+                step_fn = scan_tqdm(n)(step_fn)
+            return lax.scan(step_fn, state, xs)  # type: ignore
+
+    raise ValueError(f"Unknown backend: {backend}")
 
 
-def laxmap(f, data, batch_size=None, **kwargs):
+def laxmap(f, xs, batch_size=None, **kwargs):
     if batch_size == None:
-        return fold(lambda _, x: (None, f(x)), None, data, **kwargs)[1]
+        return fold(lambda _, x: (None, f(x)), None, xs, **kwargs)[1]
     else:
-        batches = batch_split(data, batch_size=batch_size)
+        batches = batch_split(xs, batch_size=batch_size)
         batched_out = fold(
             lambda _, batch: (None, vmap(f)(batch)), None, batches, **kwargs
         )[1]
@@ -164,7 +145,7 @@ def laxsum(f, data, batch_size=None, **kwargs):
             lambda avg, batch: (tree_add(avg, batched_f(batch)), None),
             sum_init,
             batches,
-            **kwargs
+            **kwargs,
         )[0]
 
 

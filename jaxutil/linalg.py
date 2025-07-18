@@ -1,4 +1,6 @@
-from jax import numpy as jnp, lax, vmap
+from jax import lax
+from jax import numpy as jnp
+from jax import vmap
 from jax.numpy import linalg as jla
 
 cos_dist = lambda x, y: (x @ y) / (jla.norm(x) * jla.norm(y))

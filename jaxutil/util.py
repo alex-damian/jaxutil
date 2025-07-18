@@ -1,17 +1,8 @@
-from collections import namedtuple
-from functools import partial, wraps
+from functools import partial
 
 import jax
-import numpy as np
-from jax import numpy as jnp
-from jax.flatten_util import ravel_pytree
 from jax.tree_util import register_pytree_node
 
-def flat_init(model, *args, **kwargs):
-    params = model.init(*args, **kwargs)
-    params, unravel = ravel_pytree(params)
-    f = lambda p, *args, **kwargs: model.apply(unravel(p), *args, **kwargs)
-    return f, params, unravel
 
 class ddict(dict):
     __getattr__ = dict.get
@@ -24,6 +15,7 @@ register_pytree_node(
     lambda x: (tuple(x.values()), tuple(x.keys())),
     lambda keys, values: ddict(zip(keys, values)),
 )
+
 
 class RNG:
     def __init__(self, seed=None, key=None):
@@ -50,21 +42,3 @@ register_pytree_node(
     lambda rng: ((rng.key,), None),
     lambda _, c: RNG(key=c[0]),
 )
-
-
-def clean_dict(d):
-    return {
-        key: val.item() if isinstance(val, (np.ndarray, jnp.ndarray)) else val
-        for key, val in d.items()
-    }
-
-
-def unpack(f):
-    return lambda args: f(*args)
-
-
-def print_xla(f):
-    @wraps(f)
-    def xla_f(*args,**kwargs):
-        print(jax.xla_computation(f)(*args, **kwargs).as_hlo_text())
-    return xla_f
