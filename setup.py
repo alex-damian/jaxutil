@@ -9,5 +9,5 @@ setup(
     description="Jax utility package for common models and datasets",
     license="MIT",
     keywords="jax",
-    install_requires=["jax", "flax", "jax-resnet", "GPUtil"],
+    install_requires=["jax", "jaxopt", "numpy", "matplotlib", "seaborn", "scipy", "tqdm", "jax_tqdm", "treescope"],
 )
