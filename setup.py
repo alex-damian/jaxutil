@@ -1,13 +1,23 @@
-from setuptools import setup, find_packages
+from setuptools import find_packages, setup
 
 setup(
     name="jaxutil",
     packages=find_packages(),
-    version="0.3.0",
+    version="0.4.0",
     author="Alex Damian",
     author_email="ad27@princeton.edu",
     description="Jax utility package for common models and datasets",
     license="MIT",
     keywords="jax",
-    install_requires=["jax", "jaxopt", "numpy", "matplotlib", "seaborn", "scipy", "tqdm", "jax_tqdm", "treescope"],
+    install_requires=[
+        "jax",
+        "jaxopt",
+        "numpy",
+        "matplotlib",
+        "seaborn",
+        "scipy",
+        "tqdm",
+        "jax_tqdm",
+        "treescope",
+    ],
 )

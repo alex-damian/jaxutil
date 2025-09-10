@@ -26,7 +26,7 @@ class RNG:
         else:
             raise Exception("RNG expects either a seed or random key.")
 
-    def next(self, n_keys=1):
+    def __call__(self, n_keys=1):
         if n_keys > 1:
             return jax.random.split(self.next(), n_keys)
         else:
