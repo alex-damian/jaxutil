@@ -18,7 +18,7 @@ register_pytree_node(
 
 
 class RNG:
-    def __init__(self, seed=None, key=None):
+    def __init__(self, *, seed=None, key=None):
         if seed is not None:
             self.key = jax.random.PRNGKey(seed)
         elif key is not None:
@@ -28,13 +28,13 @@ class RNG:
 
     def __call__(self, n_keys=1):
         if n_keys > 1:
-            return jax.random.split(self.next(), n_keys)
+            return jax.random.split(self(), n_keys)
         else:
             self.key, key = jax.random.split(self.key)
             return key
 
     def __getattr__(self, name):
-        return partial(getattr(jax.random, name), self.next())
+        return partial(getattr(jax.random, name), self())
 
 
 register_pytree_node(
