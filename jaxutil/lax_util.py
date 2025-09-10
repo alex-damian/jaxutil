@@ -1,12 +1,8 @@
-from functools import wraps
-from inspect import signature
 from typing import Callable, Optional, TypeVar
 
 import jax
-from jax import eval_shape, lax
+from jax import eval_shape, lax, vmap
 from jax import numpy as jnp
-from jax import vmap
-from jax.experimental.host_callback import id_tap
 from jax.tree_util import tree_flatten, tree_leaves, tree_map, tree_unflatten
 from jax_tqdm.scan_pbar import scan_tqdm
 from jaxopt.tree_util import tree_add, tree_scalar_mul
@@ -116,7 +112,7 @@ def fold(
 
 
 def laxmap(f, xs, batch_size=None, **kwargs):
-    if batch_size == None:
+    if batch_size is None:
         return fold(lambda _, x: (None, f(x)), None, xs, **kwargs)[1]
     else:
         batches = batch_split(xs, batch_size=batch_size)
@@ -130,7 +126,7 @@ def laxmap(f, xs, batch_size=None, **kwargs):
 def laxsum(f, data, batch_size=None, **kwargs):
     x0 = tree_map(lambda x: x[0], data)
     sum_init = tree_map(lambda x: jnp.zeros(x.shape, dtype=x.dtype), eval_shape(f, x0))
-    if batch_size == None:
+    if batch_size is None:
         return fold(
             lambda avg, x: (tree_add(avg, f(x)), None), sum_init, data, **kwargs
         )[0]
