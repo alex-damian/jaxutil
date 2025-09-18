@@ -57,7 +57,7 @@ def fold(
     state,
     xs=None,
     length=None,
-    backend="jax",
+    backend="lax",
     jit=False,
     show_progress=False,
     save_every=1,
