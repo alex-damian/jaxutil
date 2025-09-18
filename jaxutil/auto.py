@@ -37,6 +37,6 @@ from .types import (
     ui32,
     ui64,
 )
-from .util import RNG, ddict
+from .util import RNG, ddict, tree_to_dict
 
 treescope.basic_interactive_setup(autovisualize_arrays=True)
