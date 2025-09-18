@@ -45,3 +45,10 @@ register_pytree_node(
     lambda rng: ((rng.key,), None),
     lambda _, c: RNG(key=c[0]),
 )
+
+
+def tree_to_dict(pytree):
+    {
+        jax.tree_util.keystr(k, simple=True, separator="."): v
+        for k, v in jax.tree.leaves_with_path(pytree)
+    }
