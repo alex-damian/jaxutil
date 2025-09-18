@@ -30,8 +30,11 @@ class RNG:
         if n_keys > 1:
             return jax.random.split(self(), n_keys)
         else:
-            self.key, key = jax.random.split(self.key)
+            key, self.key = jax.random.split(self.key)
             return key
+
+    def fork(self, n_forks=1):
+        return RNG(key=self(n_forks))
 
     def __getattr__(self, name):
         return partial(getattr(jax.random, name), self())
