@@ -48,7 +48,7 @@ register_pytree_node(
 
 
 def tree_to_dict(pytree):
-    {
+    return {
         jax.tree_util.keystr(k, simple=True, separator="."): v
         for k, v in jax.tree.leaves_with_path(pytree)
     }
