@@ -90,8 +90,11 @@ def fold(
     elif backend == "lax":
         if save_every > 1:
             xs = batch_split(xs, batch_size=save_every, strict=False)
+            n_steps = tree_len(xs)
+            xs = (jnp.arange(n_steps), xs)
 
-            def epoch_fn(state: Carry, batch: X) -> tuple[Carry, Y]:
+            def epoch_fn(state: Carry, aux: X) -> tuple[Carry, Y]:
+                _, batch = aux
                 x0 = tree_map(lambda x: x[0], batch)
                 state, save = f(state, x0)
                 sub_batch = tree_map(lambda x: x[1:], batch)
@@ -99,11 +102,16 @@ def fold(
                 return state, save
 
             if show_progress:
-                epoch_fn = scan_tqdm(tree_len(xs))(epoch_fn)
+                epoch_fn = scan_tqdm(n_steps)(epoch_fn)
 
             return lax.scan(epoch_fn, state, xs)
         else:
-            step_fn = f
+            xs = (jnp.arange(n), xs)
+
+            def step_fn(state: Carry, aux: X) -> tuple[Carry, Y]:
+                _, x = aux
+                return f(state, x)
+
             if show_progress:
                 step_fn = scan_tqdm(n)(step_fn)
             return lax.scan(step_fn, state, xs)  # type: ignore
