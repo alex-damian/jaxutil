@@ -5,7 +5,6 @@ from jax import eval_shape, lax, vmap
 from jax import numpy as jnp
 from jax.tree_util import tree_flatten, tree_leaves, tree_map, tree_unflatten
 from jax_tqdm.scan_pbar import scan_tqdm
-from jaxopt.tree_util import tree_add, tree_scalar_mul
 from tqdm.auto import trange
 
 Carry = TypeVar("Carry")
@@ -13,7 +12,7 @@ X = TypeVar("X")
 Y = TypeVar("Y")
 
 tree_len = lambda tree: len(tree_leaves(tree)[0])
-
+tree_add = lambda ta,tb: tree_map(lambda a,b: a+b, ta,tb)
 
 def tree_stack(trees):
     _, treedef = tree_flatten(trees[0])
@@ -155,5 +154,5 @@ def laxsum(f, data, batch_size=None, **kwargs):
 
 def laxmean(f, data, *args, **kwargs):
     n = tree_len(data)
-    _f = lambda *args: tree_scalar_mul(1 / n, f(*args))
+    _f = lambda *args: tree_map(lambda x: x/n, f(*args))
     return laxsum(_f, data, *args, **kwargs)
