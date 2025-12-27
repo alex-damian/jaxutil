@@ -64,13 +64,15 @@ def fold(
                 save_list.append(save)
             else:
                 state, _ = fast_step(state, batch)
-        save_list = tree_stack(save_list)
-        return state, save_list
+        return state, tree_stack(save_list)
 
     elif backend == "lax":
+        trunc = (n // save_every) * save_every
         if save_every > 1:
-            xs = batch_split(xs, batch_size=save_every, strict=False)
-            n_steps = tree_len(xs)
+            xs_scan = batch_split(
+                tree_map(lambda x: x[:trunc], xs), batch_size=save_every
+            )
+            n_steps = tree_len(xs_scan)
 
             def scan_fn(state, aux):
                 _, batch = aux
@@ -79,6 +81,7 @@ def fold(
                 state = lax.scan(fast_step, state, tree_map(lambda x: x[1:], batch))[0]
                 return state, save
         else:
+            xs_scan = xs
             n_steps = n
             scan_fn = lambda state, aux: f(state, aux[1])
 
@@ -93,11 +96,21 @@ def fold(
                     jax.debug.callback(update_pbar)
                     return result
 
-                result = lax.scan(pbar_scan_fn, state, (jnp.arange(n_steps), xs))
+                state, saved = lax.scan(
+                    pbar_scan_fn, state, (jnp.arange(n_steps), xs_scan)
+                )
         else:
-            result = lax.scan(scan_fn, state, (jnp.arange(n_steps), xs))
+            state, saved = lax.scan(scan_fn, state, (jnp.arange(n_steps), xs_scan))
 
-        return result
+        if save_every > 1 and n > trunc:
+            rem = tree_map(lambda x: x[trunc:], xs)
+            state, save_rem = f(state, tree_map(lambda x: x[0], rem))
+            state = lax.scan(fast_step, state, tree_map(lambda x: x[1:], rem))[0]
+            saved = tree_map(
+                lambda a, b: jnp.concatenate([a, b[None]]), saved, save_rem
+            )
+
+        return state, saved
 
     raise ValueError(f"Unknown backend: {backend}")
 
