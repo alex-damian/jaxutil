@@ -86,19 +86,20 @@ def fold(
             scan_fn = lambda state, aux: f(state, aux[1])
 
         if show_progress:
-            with tqdm(total=n_steps) as pbar:
+            pbar = tqdm(total=n_steps)
 
-                def update_pbar():
-                    pbar.update(1)
+            def update_pbar(i):
+                pbar.update(1)
+                if i == n_steps - 1:
+                    pbar.close()
 
-                def pbar_scan_fn(state, aux):
-                    result = scan_fn(state, aux)
-                    jax.debug.callback(update_pbar)
-                    return result
+            def pbar_scan_fn(state, aux):
+                i, _ = aux
+                result = scan_fn(state, aux)
+                jax.debug.callback(update_pbar, i)
+                return result
 
-                state, saved = lax.scan(
-                    pbar_scan_fn, state, (jnp.arange(n_steps), xs_scan)
-                )
+            state, saved = lax.scan(pbar_scan_fn, state, (jnp.arange(n_steps), xs_scan))
         else:
             state, saved = lax.scan(scan_fn, state, (jnp.arange(n_steps), xs_scan))
 
