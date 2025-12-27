@@ -20,11 +20,11 @@ register_pytree_node(
 class RNG:
     def __init__(self, *, seed=None, key=None):
         if seed is not None:
+            assert key is None
             self.key = jax.random.PRNGKey(seed)
-        elif key is not None:
-            self.key = key
         else:
-            raise Exception("RNG expects either a seed or random key.")
+            assert key is not None
+            self.key = key
 
     def __call__(self, n_keys=1):
         if n_keys > 1:

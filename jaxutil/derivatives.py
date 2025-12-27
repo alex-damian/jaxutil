@@ -23,20 +23,19 @@ def smart_jacobian(f, has_aux=False):
     return jacfun
 
 
-def D(f, x, order=1, *vs, return_all=False):
+def diff(f, x, order=1, *vs, return_all=False):
     if return_all:
 
         def _f(x):
             out = f(x)
             return out, (out,)
 
-        return _D(_f, x, order, *vs, return_all=return_all)[1]
-    else:
-        _f = f
-        return _D(_f, x, order, *vs, return_all=return_all)
+        return _diff(_f, x, order, *vs, return_all=return_all)[1]
+
+    return _diff(f, x, order, *vs, return_all=return_all)
 
 
-def _D(f, x, order=1, *vs, return_all=False):
+def _diff(f, x, order=1, *vs, return_all=False):
     assert len(vs) <= order
     if order == 0:
         return f(x)
@@ -59,4 +58,4 @@ def _D(f, x, order=1, *vs, return_all=False):
             else:
                 return jvp(f, [x], [v])[1]
 
-    return _D(Df, x, order - 1, *vs, return_all=return_all)
+    return _diff(Df, x, order - 1, *vs, return_all=return_all)

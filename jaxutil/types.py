@@ -1,4 +1,3 @@
-import jax
 from jax import numpy as jnp
 
 i8 = jnp.int8

@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jaxutil"
+version = "0.5.0"
+description = "JAX utility package"
+authors = [{ name = "Alex Damian", email = "adamiab@mit.edu" }]
+license = { text = "MIT" }
+
+dependencies = [
+    "jax",
+    "numpy",
+    "tqdm",
+]
+
+[project.optional-dependencies]
+data = ["datasets"]
