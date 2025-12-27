@@ -1,5 +1,2 @@
 __pycache__/
-tests.ipynb
-.ipynb_checkpoints/
 *.egg-info
-jaxutil/test.ipynb
