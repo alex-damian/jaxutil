@@ -3,6 +3,7 @@ from functools import partial
 from typing import Any, Callable, List, Optional, Union
 
 import equinox as eqx
+from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 import jax
 import jax.numpy.linalg as jla
 import optax
