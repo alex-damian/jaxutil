@@ -19,5 +19,6 @@ from jax.flatten_util import ravel_pytree
 from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
 from matplotlib import pyplot as plt
 from numpy import linalg as la
+from tqdm.auto import tqdm, trange
 
 from jaxutil import *
