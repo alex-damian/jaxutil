@@ -13,3 +13,9 @@ dependencies = ["jax", "numpy", "tqdm"]
 
 [project.optional-dependencies]
 data = ["datasets"]
+
+[tool.setuptools]
+py-modules = ["jax_flags"]
+
+[tool.setuptools.packages.find]
+where = ["."]
