@@ -11,6 +11,7 @@ import jax
 import jax.numpy.linalg as jla
 import numpy as np
 import optax
+import treescope
 from jax import jit, lax, nn, vmap
 from jax import numpy as jnp
 from jax import random as jr
