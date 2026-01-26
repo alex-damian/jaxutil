@@ -59,7 +59,7 @@ class Residual(nnx.Module):
         self,
         block: Callable[[nnx.Rngs], nnx.Module],
         depth: int,
-        unroll=False,
+        unroll=True,
         *,
         rngs: nnx.Rngs,
     ):
