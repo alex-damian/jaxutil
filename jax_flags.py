@@ -1,11 +1,21 @@
+_warned = False
+
+
 def enable_maxtext_gpu_flags():
+    global _warned
     import os
     import sys
 
     if "jax" in sys.modules:
-        raise RuntimeError(
-            "enable_maxtext_gpu_flags() must be called before importing JAX."
-        )
+        if not _warned:
+            import warnings
+
+            warnings.warn(
+                "enable_maxtext_gpu_flags() should be called before importing JAX.",
+                stacklevel=2,
+            )
+            _warned = True
+        return
 
     os.environ["XLA_FLAGS"] = (
         "--xla_gpu_enable_latency_hiding_scheduler=true "
