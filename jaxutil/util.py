@@ -47,8 +47,8 @@ register_pytree_node(
 )
 
 
-def tree_to_dict(pytree):
+def tree_to_dict(pytree, sep="."):
     return {
-        jax.tree_util.keystr(k, simple=True, separator="."): v
+        jax.tree_util.keystr(k, simple=True, separator=sep): v
         for k, v in jax.tree.leaves_with_path(pytree)
     }
