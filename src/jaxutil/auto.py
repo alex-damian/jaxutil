@@ -16,6 +16,7 @@ from jax import jit, lax, nn, vmap
 from jax import numpy as jnp
 from jax import random as jr
 from jax import tree_util as jtu
+from jax.experimental.sparse.linalg import lobpcg_standard
 from jax.flatten_util import ravel_pytree
 from jax.nn import initializers as nni
 from jaxtyping import Array, Float, Int, PRNGKeyArray, PyTree
