@@ -23,13 +23,39 @@ def smart_jacobian(f, has_aux=False):
     return jacfun
 
 
-def diff(f, x, order=1, *vs):
+def diff(f, x, order=1, *vs, return_all=False):
+    if return_all:
+
+        def _f(x):
+            out = f(x)
+            return out, (out,)
+
+        return _diff(_f, x, order, *vs, return_all=return_all)[1]
+
+    return _diff(f, x, order, *vs, return_all=return_all)
+
+
+def _diff(f, x, order=1, *vs, return_all=False):
     assert len(vs) <= order
     if order == 0:
         return f(x)
     elif len(vs) == order:
         v, *vs = vs
-        Df = lambda x: jax.jvp(f, [x], [v])[1]
     else:
-        Df = jax.jacobian(f)
-    return diff(Df, x, order - 1, *vs)
+        v = None
+
+    def Df(x):
+        if return_all:
+            if v is None:
+                jac, hist = smart_jacobian(f, has_aux=True)(x)
+                return jac, (*hist, jac)
+            else:
+                _, jac, hist = jvp(f, [x], [v], has_aux=True)
+                return jac, (*hist, jac)
+        else:
+            if v is None:
+                return smart_jacobian(f)(x)
+            else:
+                return jvp(f, [x], [v])[1]
+
+    return _diff(Df, x, order - 1, *vs, return_all=return_all)

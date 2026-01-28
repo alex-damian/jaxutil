@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "jaxutil"
-version = "0.5.5"
+version = "0.6.0"
 description = "JAX utility package"
 authors = [{ name = "Alex Damian", email = "adamiab@mit.edu" }]
 license = { text = "MIT" }
@@ -15,7 +15,8 @@ dependencies = ["jax", "numpy", "tqdm"]
 data = ["datasets"]
 
 [tool.setuptools]
+package-dir = { "" = "src" }
 py-modules = ["jax_flags"]
 
 [tool.setuptools.packages.find]
-where = ["."]
+where = ["src"]
