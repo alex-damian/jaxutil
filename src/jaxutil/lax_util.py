@@ -1,3 +1,5 @@
+from functools import wraps
+
 import jax
 from jax import eval_shape, lax, vmap
 from jax import numpy as jnp
@@ -159,3 +161,19 @@ def laxmean(f, data, *args, **kwargs):
     n = tree_len(data)
     _f = lambda *args: tree_map(lambda x: x / n, f(*args))
     return laxsum(_f, data, *args, **kwargs)
+
+
+def xmap(f, in_axes=None, out_axes=None):
+    @wraps(f)
+    def wrapped(*args):
+        num_args = len(args)
+        in_ax = in_axes if in_axes is not None else (0,) * num_args
+        out_ax = out_axes if out_axes is not None else (0,) * num_args
+        result = lambda *a: f(*a)
+        for i in reversed(range(num_args)):
+            if in_ax[i] is not None:
+                curr_in = tuple(in_ax[j] if j == i else None for j in range(num_args))
+                result = jax.vmap(result, in_axes=curr_in, out_axes=out_ax[i])
+        return result(*args)
+
+    return wrapped
